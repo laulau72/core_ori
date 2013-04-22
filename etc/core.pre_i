@@ -1,0 +1,64 @@
+#!/bin/ksh ## DO NOT RELY ON THIS
+# THIS SCRIPT IS NOT A "SEPARATE" SCRIPT, it will get included
+# in the RPM's spec file, so there is no point in setting the interpreter to /bin/ksh
+# amaret/20080227
+exit 0
+
+# http://fedoraproject.org/wiki/Packaging/ScriptletSnippets
+
+
+# check if installing the package for the first time (rather than upgrading it)
+#if [ $1 -eq 1 ]; then
+#	# first install, setup this variable explicitly
+#	export FACTORY_ROOT=/usr/local/factory
+#fi
+
+
+if [ -z "$FACTORY_ROOT" ]
+then
+	echo "NOTE : FACTORY_ROOT variable was not set"
+else
+	echo "Environment variable FACTORY_ROOT is correctly set (value: $FACTORY_ROOT)"
+	exit 0
+fi
+
+
+platform=`/bin/uname`
+
+if [[ $platform = 'Linux' ]]; then
+#	echo "Automatically adding FACTORY_ROOT to /etc/environment and /etc/profile.local"
+
+# please run config.environment.Linux instead of this automatic script
+
+#	echo "FACTORY_ROOT=/usr/local/factory" >> /etc/environment
+#        echo "SERONO_ROOT=/usr/local/factory" >> /etc/environment
+
+#	echo "export FACTORY_ROOT=/usr/local/factory" >> /etc/profile.local
+#	echo "export SERONO_ROOT=\$FACTORY_ROOT" >> /etc/profile.local
+
+# please run config.initscript.Linux instead of this automatic script
+
+#	echo "export FACTORY_ROOT=/usr/local/factory" > /etc/initscript
+#	echo "export SERONO_ROOT=\$FACTORY_ROOT" >> /etc/initscript
+#	echo 'eval exec "$4"' >> /etc/initscript
+
+#	. /etc/environment
+#	. /etc/profile.local
+
+	exit 0
+fi
+
+if [[ $platform = 'AIX' ]]; then
+        echo "Automatically adding FACTORY_ROOT to /etc/environment"
+        echo "FACTORY_ROOT=/usr/local/factory" >> /etc/environment
+        echo "SERONO_ROOT=\$FACTORY_ROOT" >> /etc/environment
+        echo "FACTORY_ROOT=/usr/local/factory" >> /etc/profile
+        echo "SERONO_ROOT=\$FACTORY_ROOT" >> /etc/profile
+        . /etc/environment
+        . /etc/profile
+
+        exit 0
+fi
+
+echo "ERROR : Please add FACTORY_ROOT=/usr/local/factory in /etc/environment"
+exit 1

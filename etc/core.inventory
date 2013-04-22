@@ -1,0 +1,15 @@
+#
+#
+#
+#
+
+etc 		-o root -g bin -m 555  -D  -L
+bin 		-o root -g bin -m 555  -D  -L
+
+functions	-o root -g bin -m 555  -C  -L
+bin/cron.run	-o root -g bin -m 555  -C  -L
+bin/getSchedule	-o root -g bin -m 555  -C  -L
+bin/configuremultiplefile	-o root -g bin -m 555  -C  -L
+
+etc/core.post_i	-o root -g bin -m 555  -C  -L
+etc/core.pre_i	-o root -g bin -m 555  -C  -L

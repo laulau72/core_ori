@@ -1,0 +1,116 @@
+#!/bin/ksh
+
+
+. $FACTORY_ROOT/core/functions
+
+
+while getopts W:M: OPT
+do
+  case $OPT in
+    M) monthday=$OPTARG;;
+    W) weekday=$OPTARG;;
+    *) exit 22;;
+  esac
+done
+shift $(($OPTIND -1)) 
+
+if [[ -z "$monthday" && -z "$weekday" ]]
+then
+	exit 22
+fi
+
+
+while read line
+do
+
+	#
+	# Skip comments
+	#
+
+	echo "$line" | grep "^#" 2> /dev/null 1> /dev/null
+	if [ $? -eq 0 ]
+	then
+		continue
+	fi
+
+	schedspec=$(echo $line | cut -f 1 -d":")
+	command=$(echo $line | cut -f 2- -d":")
+
+	case "$schedspec" in 
+		"ALL")
+			spectype="ALL"
+			;;
+		W*)
+			spectype="W"
+			intervallist=$(echo $schedspec | cut -f2 -d" " | sed 's/,/ /g')
+			;;
+		M*)
+			spectype="M"
+			intervallist=$(echo $schedspec | cut -f2 -d" " | sed 's/,/ /g')
+			;;
+	esac
+
+
+	if [ "$spectype" = "ALL" ]
+	then
+		day=1
+		while (( $day <= 7 ))
+		do
+			weekdayarr[$day]="$command"
+			(( day=day+1 ))
+		done
+
+		day=1
+		while (( $day <= 31 ))
+		do
+			monthdayarr[$day]="$command"
+			(( day=day+1 ))
+		done
+	fi
+
+	if [ "$spectype" = "W" ]
+	then
+
+		for interval in $intervallist
+		do
+			startday=$(echo $interval | cut -f1 -d"-")
+			endday=$(echo $interval | cut -f2 -d"-")
+			day=$startday
+			while (( $day <= $endday )) 
+			do
+				weekdayarr[$day]="$command"
+				(( day=day+1 ))
+			done
+		done
+	fi
+
+	if [ "$spectype" = "M" ]
+	then
+		for interval in $intervallist
+		do
+			startday=$(echo $interval | cut -f1 -d"-")
+			endday=$(echo $interval | cut -f2 -d"-")
+			day=$startday
+			while (( $day <= $endday )) 
+			do
+				monthdayarr[$day]="$command"
+				(( day=day+1 ))
+			done
+		done
+	fi
+done
+
+
+if [ ! -z "$monthday" ]
+then
+	if [ ! -z "${monthdayarr[$monthday]}" ]
+	then
+		echo "M $monthday:${monthdayarr[$monthday]}"
+		exit 0
+	fi
+fi
+
+if [[ ! -z "$weekday" ]]
+then
+	echo "W $weekday:${weekdayarr[$weekday]}"
+fi

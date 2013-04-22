@@ -1,0 +1,175 @@
+#!/bin/ksh
+
+export FACTORY_ROOT=/usr/local/factory
+
+
+if [ ! -d /var/factory ]
+then
+        mkdir /var/factory
+fi
+
+if [ ! -d /var/factory/logs ]
+then
+	mkdir /var/factory/logs
+fi
+
+if [ ! -d /var/factory/tmp ]
+then 
+	mkdir /var/factory/tmp
+fi
+
+if [ ! -d /var/factory/audit ]
+then 
+	mkdir /var/factory/audit
+fi
+
+if [ -d /var/serono ]
+then
+	mv /var/serono/* /var/factory/
+	rm -rf /var/serono
+	# machines that do not have one will get a new /var/factory directory and serono will be a link to it
+	ln -s /var/factory /var/serono
+fi
+
+if [ ! -d /usr/local/serono ]
+	then	ln -s /usr/local/factory /usr/local/serono
+fi
+chmod ugo+rwx /var/factory
+chmod ugo+rwx /var/factory/logs
+chmod ugo+rwx /var/factory/tmp
+chmod ugo+rwx /var/factory/audit
+
+. $FACTORY_ROOT/core/functions
+FACTORY_NOTTY=N 	# force STDOUT in NIM
+
+fatalcheckid root
+
+PLATFORM=$(uname)
+
+case $PLATFORM in
+	AIX)
+		#
+		# Set $FACTORY_ROOT in /etc/environment
+		#
+		loginfo "Setting /etc/environment"
+		TARGET=/etc/environment
+		WORKFILE=$(add_temp_files environment)
+		FINALFILE=$(add_temp_files environment_final)
+
+		cat $TARGET > $WORKFILE
+
+                # may fail if empty
+                sed  '/^SERONO_ROOT=/d' $WORKFILE > $FINALFILE
+                fatalrunit cp $FINALFILE $WORKFILE
+                sed '/^FACTORY_ROOT=/d' $WORKFILE > $FINALFILE
+                echo "SERONO_ROOT=/usr/local/factory" >> $FINALFILE
+                echo "FACTORY_ROOT=/usr/local/factory" >> $FINALFILE
+
+		fatalrunit cp $FINALFILE $TARGET
+		remove_temp_files
+		;;
+	Linux)
+		if [ -f /etc/redhat-release ]
+		then
+			TARGET=/etc/profile.d/factory.sh
+			loginfo "Automatically adding FACTORY_ROOT to $TARGET"
+			echo "FACTORY_ROOT=/usr/local/factory" > $TARGET
+			echo "export FACTORY_ROOT" >> $TARGET
+		else
+			TARGET=/etc/profile.local
+			loginfo "Automatically adding FACTORY_ROOT to $TARGET"
+                	WORKFILE=$(add_temp_files environment)
+                	FINALFILE=$(add_temp_files environment_final)
+	
+			cat $TARGET > $WORKFILE
+
+			# may fail if empty
+			# remove old conf
+			sed  '/^SERONO_ROOT=/d' $WORKFILE > $FINALFILE
+			fatalrunit cp $FINALFILE $WORKFILE
+			sed  '/export SERONO_ROOT/d' $WORKFILE > $FINALFILE
+			fatalrunit cp $FINALFILE $WORKFILE
+			sed '/^FACTORY_ROOT=/d' $WORKFILE > $FINALFILE
+			fatalrunit cp $FINALFILE $WORKFILE
+			sed  '/export FACTORY_ROOT/d' $WORKFILE > $FINALFILE
+
+			# add new conf
+			echo "SERONO_ROOT=/usr/local/factory" >> $FINALFILE
+			echo "export SERONO_ROOT" >> $FINALFILE
+			echo "FACTORY_ROOT=/usr/local/factory" >> $FINALFILE
+			echo "export FACTORY_ROOT" >> $FINALFILE
+			echo "export _AST_FEATURES='UNIVERSE - att'" >> $FINALFILE
+
+                	fatalrunit cp $FINALFILE $TARGET
+                	remove_temp_files
+		fi
+		;;
+	SunOS)
+		loginfo "Automatically adding FACTORY_ROOT to /etc/profile"
+
+                TARGET=/etc/profile
+                WORKFILE=$(add_temp_files environment)
+                FINALFILE=$(add_temp_files environment_final)
+
+                cat $TARGET > $WORKFILE
+
+                # may fail if empty
+                # remove old conf
+                sed  '/^SERONO_ROOT=/d' $WORKFILE > $FINALFILE
+                fatalrunit cp $FINALFILE $WORKFILE
+                sed  '/export SERONO_ROOT/d' $WORKFILE > $FINALFILE
+                fatalrunit cp $FINALFILE $WORKFILE
+                sed '/^FACTORY_ROOT=/d' $WORKFILE > $FINALFILE
+                fatalrunit cp $FINALFILE $WORKFILE
+                sed  '/export FACTORY_ROOT/d' $WORKFILE > $FINALFILE
+
+                # add new conf
+                echo "SERONO_ROOT=/usr/local/factory" >> $FINALFILE
+                echo "export SERONO_ROOT" >> $FINALFILE
+                echo "FACTORY_ROOT=/usr/local/factory" >> $FINALFILE
+                echo "export FACTORY_ROOT" >> $FINALFILE
+
+                fatalrunit cp $FINALFILE $TARGET
+                remove_temp_files
+                ;;
+	*)
+		logwarn "Not environment variable to be set"
+		;;
+esac
+
+#
+# STOP/START cron daemon
+#
+echo "Stop/start cron daemon"
+if [ $PLATFORM = "AIX" ]
+then
+	PIDCRON=$(ps -o "pid user comm" -u root |grep cron | awk '{print $1}')
+	if [ "$PIDCRON" != "" ]
+	then
+		kill $PIDCRON
+		if [ $? = 0 ]
+		then
+			RESTART_CRON=$(grep cron /etc/inittab |awk -F":" '{if ($3 == "respawn") {print "NO"} else {print "YES"}}')
+			if [ $RESTART_CRON = "YES" ]
+			then
+				echo "cron on this server is not on respawn startup mode. Restart manually."
+				/usr/sbin/cron &
+			else
+				echo "cron on this server is on respawn startup mode."
+			fi
+			sleep 5
+			echo "new cron daemon started."
+			ps -o "pid user comm" -u root |grep cron
+		else
+			echo "Error to kill cron daemon. Please stop and restart cron daemon manually."
+		fi
+	fi
+elif [ -f /etc/redhat-release ]
+then
+	/etc/init.d/crond restart
+else
+	/etc/init.d/cron stop
+	/etc/init.d/cron start
+fi
+
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/ksh
+
+. $FACTORY_ROOT/core/functions
+
+$FULLDEBUG
+CHOICEFCT=""
+MENUNAME="kt factory"
+selectfctmenu -S list1 opt2 list3 opt4
+
+
+echo "CHOICEFCT: $CHOICEFCT"

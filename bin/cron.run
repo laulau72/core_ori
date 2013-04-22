@@ -1,0 +1,25 @@
+#!/bin/ksh
+#
+#
+
+#
+# Set FACTORY_ROOT if not set
+# This is not very good practice but is required in some situation
+# when started from crontab
+#
+
+if [ -z "$FACTORY_ROOT" ]
+then
+	FACTORY_ROOT=/usr/local/factory
+	export FACTORY_ROOT
+fi
+
+
+. $FACTORY_ROOT/core/functions
+
+export PROGNAME=$(basename $1)
+setlogenv
+
+
+exectoreport
+$*

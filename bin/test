@@ -1,0 +1,5 @@
+#!/bin/ksh
+
+
+echo "test script"
+iadd new line to replace version 1.4
